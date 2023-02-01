@@ -4,7 +4,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "test": "test"
+    "test": "test",
+    "host": "node run ~/Projects/NODEJS/CurseWork/API/app.js"
   },
   "author": "",
   "license": "ISC",
