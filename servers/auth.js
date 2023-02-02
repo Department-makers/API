@@ -1,7 +1,8 @@
 const process = require('process');
 const fs = require('fs');
 const path = require('path');
-const md5 = require('md5');
+
+const config = require('../config/config.js');
 
 var authList = [];
 
@@ -15,13 +16,11 @@ const checkAuth = (request) => {
     
     let parsed_request = request.split(' ');
 
-    console.log({login: parsed_request[0], password: md5(parsed_request[1] + "I_10ve_@pp!e")})
-
     let entered = false;
 
     authList.forEach(el => {
         if(el.login == parsed_request[0]) {
-            if(el.password == md5(parsed_request[1] + "I_10ve_@pp!e"))
+            if(el.password == config.get_auth_hash(parsed_request[1]))
                 entered = true;
             return;
         }

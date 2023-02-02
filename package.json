@@ -5,7 +5,8 @@
   "main": "app.js",
   "scripts": {
     "test": "test",
-    "host": "node run ~/Projects/NODEJS/CurseWork/API/app.js"
+    "host": "node app.js",
+    "create_auth": "node servers/create_auth"
   },
   "author": "",
   "license": "ISC",
