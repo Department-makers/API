@@ -1,218 +1,354 @@
 const sqlite3 = require('sqlite3');
 
-
 class DB {
 
     constructor() {
-        this.db = new sqlite3.Database('./data/Departament.db', (err) => {
+        this.db = new sqlite3.Database('../data/Departament.db', (err) => {
             if (err)
                 return console.error(err.message)
             console.log('Connected to Departament database')
         })
+        this.db.run(`PRAGMA foreign_keys = 1`)
     }
 
     // user = {first_name, second_name, role_id, email, password, photo_path, is_verified}
     async createUser(user) {
-        this.db.get(
-            `INSERT INTO Users (first_name, second_name, role_id, email, password, photo_path, is_verified)
-            VALUES ($first_name, $last_name, &role_id, $email, $password, $photo_path, $is_verified) 
-            RETURNING user_id;`,
-            {
-                $first_name : user.first_name,
-                $second_name : user.second_name,
-                $role_id : user.role_id,
-                $email : user.email,
-                $password : user.password,
-                $photo_path : user.photo_path,
-                $is_verified : user.is_verified
-            }, (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            });
+        return new Promise( (resolve, reject) => {
+
+            this.db.serialize( () => {
+                this.db.get(
+                    `INSERT INTO Users (first_name, second_name, role_id, email, password, photo_path, is_verified)
+                VALUES ($first_name, $second_name, $role_id, $email, $password, $photo_path, $is_verified) 
+                RETURNING user_id;`,
+                    {
+                        $first_name: user.first_name,
+                        $second_name: user.second_name,
+                        $role_id: user.role_id,
+                        $email: user.email,
+                        $password: user.password,
+                        $photo_path: user.photo_path,
+                        $is_verified: user.is_verified
+                    }, (err, row) => {
+                        if (err) {
+                            reject(err)
+                            console.log(err)
+                        }
+                        resolve(row)
+                    })
+            } )
+        })
+    }
+
+    async addStudentWait(student_id, group_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `INSERT INTO Add_Students(student_id, group_id) 
+                 VALUES($student_id, $group_id)`,
+                {
+                    $student_id : student_id,
+                    $group_id : group_id
+                }, (err) => {
+                    if (err) {
+                        reject(err)
+                        console.log(err)
+                    }
+                    resolve()
+                }
+            )
+        } )
     }
 
     async removeUser(user_id) {
-        this.db.run(`DELETE FROM Users WHERE user_id = ?;`,
-            user_id, (err) => {
-            if (err)
-                return console.log(err)
-            })
+        return new Promise( (resolve, reject) => {
+            this.db.run(`DELETE FROM Users WHERE user_id = ?;`,
+                user_id, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                })
+        })
     }
 
     // names = {first_name, second_name}
     async renameUser(user_id, names) {
-        this.db.run(`UPDATE Users
+        return new Promise( (resolve, reject) => {
+            this.db.run(`UPDATE Users
                      SET first_name = $first_name,
-                     SET second_name = $second_name
+                         second_name = $second_name
                      WHERE user_id = $user_id;`,
-            {
-                $first_name : names.first_name,
-                $second_name : names.second_name,
-                $user_id : user_id
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            })
+                {
+                    $first_name: names.first_name,
+                    $second_name: names.second_name,
+                    $user_id: user_id
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                })
+        })
     }
 
     async editPhoto(user_id, photo) {
-        this.db.run(`UPDATE Users
+        return new Promise((resolve, reject) => {
+            this.db.run(`UPDATE Users
             SET photo_path = $photo
             WHERE user_id = $user_id;`,
-            {
-                $photo : photo,
-                $user_id : user_id
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            })
+                {
+                    $photo: photo,
+                    $user_id: user_id
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                })
+        })
     }
 
     async editPassword(user_id, password) {
-        this.db.run(`UPDATE Users 
+        return new Promise((resolve, reject) => {
+            this.db.run(`UPDATE Users 
                     SET password = $password
                     WHERE user_id = $user_id;`,
-            {
-                $password : password,
-                $user_id : user_id
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            })
+                {
+                    $password: password,
+                    $user_id: user_id
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                })
+        })
     }
 
     async editEmail(user_id, email) {
-        this.db.run(`UPDATE Users
+        return new Promise((resolve, reject) => {
+            this.db.run(`UPDATE Users
                      SET email = $email
                      WHERE user_id = $user_id;`,
-            {
-                $email : email,
-                $user_id : user_id
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            }
-        )
+                {
+                    $email: email,
+                    $user_id: user_id
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                }
+            )
+        })
     }
 
     // second_name, role, email, photo
     async getUserInfo(user_id) {
-        await this.db.get(`SELECT * FROM Users_v
+        return new Promise((resolve, reject) => {
+            this.db.get(`SELECT * FROM Users_v
                      INNER JOIN Roles USING (role_id)
                      WHERE user_id = ?`, user_id,
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            })
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                })
+        })
     }
 
     async getPasswordHash(user_id) {
-        await this.db.get(`SELECT password FROM Users
+        return new Promise((resolve, reject) => {
+            this.db.get(`SELECT password FROM Users
                             WHERE user_id = ?`, user_id,
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            })
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                })
+        })
     }
 
     async setRole(user_id, new_role) {
-        this.db.run(`UPDATE Users 
+        return new Promise((resolve, reject) => {
+            this.db.run(`UPDATE Users 
                     SET role_id = $new_role
                     WHERE user_id = $user_id`,
-            {
-                $new_role : new_role,
-                $user_id : user_id
-            }, (err) => {
-                if(err)
-                    return console.log(err)
-            })
+                {
+                    $new_role: new_role,
+                    $user_id: user_id
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                })
+        })
     }
 
     //  method that sets new group
     async setGroup(user_id, new_group_id) {
-        this.db.run(`UPDATE Students SET group_id = $new_group
+        return new Promise((resolve, reject) => {
+            this.db.run(`UPDATE Students SET group_id = $new_group
                      WHERE student_id = $user_id`,
-            {
-                $new_group : new_group_id,
-                $user_id : user_id
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            })
+                {
+                    $new_group: new_group_id,
+                    $user_id: user_id
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                })
+        })
     }
 
     //  method that returns group_id
     async getGroup(student_id) {
-        this.db.get(`SELECT group_id FROM Students
+        return new Promise((resolve, reject) => {
+            this.db.get(`SELECT group_id FROM Students
                      WHERE student_id = ?`, student_id,
-            (err) => {
-                if (err)
-                    return console.log(err)
-            })
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                })
+        })
     }
 
-    // TODO method that sets student as accepted
-    acceptStudent(user_id)
+    async getStudentsWait (department_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.all(
+                `SELECT s.student_id, g.group_id, short_name, course, full_name
+                 FROM Add_Students s
+	             INNER JOIN Groups g ON s.group_id = g.group_id AND g.departament_id = $id;`,
+                { $id : department_id },
+                (err, rows) => {
+                    if (err)
+                        reject(err)
+                    resolve(rows)
+                }
+            )
+        } )
+    }
 
-    // TODO method that sets students as denied
-    denyStudent(user_id)
+    //  method that sets student as accepted
+    async acceptStudent(student_id, group_id) {
+
+        return new Promise((resolve, reject) => {
+            this.db.serialize(() => {
+                this.db.run(
+                    `UPDATE Users
+                    SET is_verified = 1
+                    WHERE user_id = $id`,
+                    { $id: student_id },
+                    (err) => {
+                        if (err)
+                            reject(err)
+                    }
+                ).run(
+                    `DELETE FROM Add_Students
+                     WHERE student_id = $id`,
+                    { $id : student_id },
+                    (err) => {
+                        if (err)
+                            reject(err)
+                    }
+                ).run(
+                    `INSERT INTO Students(student_id, group_id)
+                     VALUES($id, $group_id)`,
+                    {
+                        $id : student_id,
+                        $group_id : group_id
+                    }, (err) => {
+                        if (err)
+                            reject(err)
+                        resolve()
+                    }
+                )
+            })
+        })
+    }
+
+    //  method that sets students as denied
+    async denyStudent(student_id) {
+        return new Promise((resolve, reject) => {
+            this.db.serialize(() => {
+                this.db.run(
+                    `DELETE FROM Add_Students WHERE student_id = $id`,
+                    {$id: student_id},
+                    (err) => {
+                        if (err)
+                            reject(err)
+                    }
+                ).run(
+                    `DELETE FROM Users WHERE user_id = $id`,
+                    {$id: student_id},
+                    (err) => {
+                        if (err)
+                            reject(err)
+                        resolve()
+                    }
+                )
+            })
+        })
+    }
 
     async isVerified(user_id) {
-        await this.db.get(`SELECT is_verified FROM Users u 
+        return new Promise( (resolve, reject) => {
+            this.db.get(`SELECT is_verified FROM Users u 
                            WHERE user_id = ?;`, user_id,
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            })
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(!!row.is_verified)
+                })
+        } )
     }
 
     //  method that returns id of department where he is head.
     async whoseHead(teacher_id) {
-        this.db.get(`SELECT whose_head FROM Teachers
+        return new Promise( (resolve, reject) => {
+            this.db.get(`SELECT whose_head FROM Teachers
                     WHERE teacher_id = ?`, teacher_id,
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            })
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                })
+        })
     }
 
     //  method that pin teacher to discipline
-    async pinToDiscipline(teacher_id, group_subj_id) {
-        this.db.run(`UPDATE Groups_Subjects
+    async pinToSubject(teacher_id, subject_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.run(`UPDATE Groups_Subjects
                      SET teacher_id = $teacher_id
                      WHERE group_subj_id = $group_subj_id;`,
-            {
-                $teacher_id : teacher_id,
-                $group_subj_id : group_subj_id
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            })
+                {
+                    $teacher_id : teacher_id,
+                    $group_subj_id : subject_id
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                })
+        } )
     }
 
     //  method that unpin teacher from discipline
-    async unpinFromDiscipline(group_subj_id) {
-        this.db.run(`UPDATE Groups_Subjects
+    async unpinFromSubject(subject_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.run(`UPDATE Groups_Subjects
                      SET teacher_id = NULL
                      WHERE group_subj_id = $group_subj_id;`,
-            {
-                $group_subj_id : group_subj_id
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            })
+                { $group_subj_id : subject_id },
+                (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                })
+        } )
     }
 
     //  method that returns list of groups_subjects of
     // teacher that he pinned to
-    async getDisciplineListOfTeacher(teacher_id) {
-        this.db.all(
-            `SELECT group_subj_id, 
+    async getSubjectListOfTeacher(teacher_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.all(
+                `SELECT group_subj_id, 
 	        subject_id,
 	        group_id, 
 	        s.name AS subject_name,
@@ -224,288 +360,412 @@ class DB {
 	        INNER JOIN Subjects s USING(subject_id)
             WHERE teacher_id = $teacher_id
             ORDER BY course;`,
-            { $teacher_id : teacher_id },
-            (err, rows) => {
-                if (err)
-                    return console.log(err)
-                return rows
-            })
+                { $teacher_id : teacher_id },
+                (err, rows) => {
+                    if (err)
+                        reject(err)
+                    resolve(rows)
+                })
+        } )
     }
 
     // method that creates group from object
     // group = {department_id, full_name, short_name, train_area_code, form_year, course}
     async createGroup(group) {
-        this.db.get(`
+        return new Promise( (resolve, reject) => {
+            this.db.get(`
             INSERT INTO Groups(departament_id, full_name, short_name, train_area_code, form_year, course)
             VALUES
 	        ($departament_id, $full_name, $short_name, $train_area_code, $form_year, $course)
             RETURNING group_id;`,
-            {
-                $departament_id : group.departament_id,
-                $full_name : group.fulll_name,
-                $short_name : group.short_name,
-                $train_area_code : group.train_area_code,
-                $form_year : group.form_year,
-                $course : group.course
-            }, (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            }
-        )
-
+                {
+                    $departament_id : group.department_id,
+                    $full_name : group.full_name,
+                    $short_name : group.short_name,
+                    $train_area_code : group.train_area_code,
+                    $form_year : group.form_year,
+                    $course : group.course
+                }, (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                }
+            )
+        } )
     }
 
     //  method that removes group with id
     async removeGroup(group_id) {
-        this.db.run(
-            `DELETE FROM Groups 
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `DELETE FROM Groups 
              WHERE group_id = $group_id`,
-            {$group_id : group_id},
-            (err) => {
-                if (err)
-                    return console.log(err)
-            })
+                {$group_id : group_id},
+                (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                })
+        } )
     }
 
     //  method that returns group list
     async getGroupList(department_id) {
-        this.db.all(
-            `SELECT * FROM Groups g
+        return new Promise( (resolve, reject) => {
+            this.db.all(
+                `SELECT 
+                    group_id, 
+                    departament_id AS department_id,
+                    full_name,
+                    short_name, 
+                    train_area_code,
+                    form_year, 
+                    course
+                FROM Groups g
             WHERE departament_id = $departament_id
             ORDER BY course;`,
-            { $departament_id : department_id },
-            (err, rows) => {
-                if (err)
-                    return console.log(err)
-                return rows
-            }
-        )
+                { $departament_id : department_id },
+                (err, rows) => {
+                    if (err)
+                        reject(err)
+                    resolve(rows)
+                }
+            )
+        } )
     }
 
     //  method that return info about group
     // group_id, department_id, full_name, short_name,
     // train_code, form_year, course
     async groupInfo(group_id) {
-        this.db.get(
-            `SELECT * FROM Groups g 
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT
+                    group_id, 
+                    departament_id AS department_id,
+                    full_name,
+                    short_name, 
+                    train_area_code,
+                    form_year, 
+                    course
+                 FROM Groups g 
              WHERE group_id = $group_id;`,
-            { $group_id : group_id },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            }
-        )
+                { $group_id : group_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                }
+            )
+        } )
     }
 
     //  method that returns student list of group
     async studentListOfGroup(group_id) {
-        this.db.all(
-            `SELECT u.user_id, u.first_name, u.second_name, u.photo_path
+        return new Promise( (resolve, reject) => {
+            this.db.all(
+                `SELECT u.user_id, u.first_name, u.second_name, u.photo_path
              FROM Users_v u 
              INNER JOIN Students s ON s.group_id = $group_id AND u.user_id = s.student_id`,
-            { $group_id : group_id },
-            (err, rows) => {
-                if (err)
-                    return console.log(err)
-                return rows
-            }
-        )
+                { $group_id : group_id },
+                (err, rows) => {
+                    if (err)
+                        reject(err)
+                    resolve(rows)
+                }
+            )
+        } )
     }
-    
+
 
     //  method that returns all discipline of group
-    async disciplineList(group_id) {
-        this.db.all(
-            `SELECT group_subj_id, 
-	        subject_id, 
+    async subjectList(group_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.all(
+                `SELECT group_subj_id AS subject_id, 
+	        subject_id AS discipline_id, 
 	        s.name
             FROM Groups_Subjects gs 
 	        INNER JOIN Subjects s USING (subject_id)
             WHERE group_id = $group_id;`,
-            { $group_id : group_id },
-            (err, rows) => {
-                if (err)
-                    return console.log(err)
-                return rows
-            }
-        )
+                { $group_id : group_id },
+                (err, rows) => {
+                    if (err)
+                        reject(err)
+                    resolve(rows)
+                }
+            )
+        } )
     }
 
-    // TODO method that returns can user see group
-    canSeeGroup(group_id, user_id)
+    //  method that returns can student see group
+    async canStudentSeeGroup(group_id, student_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT group_id FROM Students
+             WHERE student_id = $id AND group_id = $group_id`,
+                {
+                    $id : student_id,
+                    $group_id : group_id
+                }, (err, row) => {
+                    if (err)
+                        reject(err)
+                    if (row.length === 0)
+                        resolve(false)
+                    else resolve(true)
+                }
+            )
+        } )
+    }
+
+    //  method that returns can user see group
+    async canHeadSeeGroup(group_id, head_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT group_id FROM Groups g
+               INNER JOIN Departaments USING (departament_id)
+            WHERE head_id = $id AND group_id = $group_id`,
+                {
+                    $id : head_id,
+                    $group_id : group_id
+                }, (err, row) => {
+                    if (err)
+                        reject(err)
+                    if (row.length === 0)
+                        resolve(false)
+                    else resolve(true)
+                }
+            )
+        } )
+    }
 
     //  method that creates new subject in department
     // subject = {department_id, name}
-    async createSubject(subject) {
-        this.db.get(
-            `INSERT INTO Subjects (departament_id, name)
+    async createDiscipline(discipline) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `INSERT INTO Subjects (departament_id, name)
              VALUES ($departament_id, $name)
-             RETURNING subject_id;`,
-            {
-                $departament_id : subject.departament_id,
-                $name : $subject.name
-            }, (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            }
-        )
+             RETURNING subject_id AS discipline_id;`,
+                {
+                    $departament_id : discipline.departament_id,
+                    $name : discipline.name
+                }, (err, row) => {
+                    if (err)
+                        return reject(err)
+                    return resolve(row)
+                }
+            )
+        } )
     }
 
     //  method that removes discipline by id
-    async removeSubject(subject_id) {
-        this.db.run(
-            `DELETE FROM Subjects WHERE subject_id = $subject_id;`,
-            { $subject_id : subject_id },
-            (err) => {
-                if (err)
-                    return console.log(err)
-            }
-        )
+    async removeDiscipline(discipline_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `DELETE FROM Subjects WHERE subject_id = $subject_id;`,
+                { $subject_id : discipline_id },
+                (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                }
+            )
+        } )
     }
 
     //  method that sets new name of discipline
-    async setSubjectName(subject_id, name) {
-        this.db.run(
-            `UPDATE Subjects
+    async setDisciplineName(discipline_id, name) {
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `UPDATE Subjects
              SET name = $name
              WHERE subject_id = $id;`,
-            {
-                $id : subject_id,
-                $name : name
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            }
-        )
+                {
+                    $id : discipline_id,
+                    $name : name
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                }
+            )
+        } )
     }
 
     //  method that info about discipline
-    async subjectInfo(subject_id) {
-        this.db.get(
-            `SELECT * FROM Subjects WHERE subject_id = $subject_id`,
-            { $subject_id : subject_id },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            }
-        )
+    async disciplineInfo(discipline_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT 
+                    subject_id AS discipline_id,
+                    departament_id AS department_id,
+                    name
+                 FROM Subjects WHERE subject_id = $subject_id`,
+                { $subject_id : discipline_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                }
+            )
+        } )
     }
 
     //  method that returns list of disciplines of department
-    async subjectList(department_id) {
-        this.db.all(
-            `SELECT * FROM Subjects WHERE departament_id = $departament_id`,
-            { $departament_id : department_id },
-            (err, rows) => {
-                if (err)
-                    return console.log(err)
-                return rows
-            }
-        )
+    async disciplineList(department_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.all(
+                `SELECT 
+                    subject_id AS discipline_id,
+                    departament_id AS department_id,
+                    name
+                FROM Subjects WHERE departament_id = $departament_id`,
+                { $departament_id : department_id },
+                (err, rows) => {
+                    if (err)
+                        reject(err)
+                    resolve(rows)
+                }
+            )
+        } )
     }
 
     //  method that pins subject to group
-    async pinSubjectToGroup(group_id, subject_id) {
-        this.db.get(
-            `INSERT INTO Groups_Subjects (subject_id, group_id)
+    async pinDisciplineToGroup(group_id, discipline_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `INSERT INTO Groups_Subjects (subject_id, group_id)
              VALUES ($subject_id, $group_id)
-             RETURNING group_subj_id;`,
-            {
-                $subject_id : subject_id,
-                $group_id : group_id
-            }, (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            } )
+             RETURNING group_subj_id AS subject_id;`,
+                {
+                    $subject_id : discipline_id,
+                    $group_id : group_id
+                }, (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                } )
+        } )
     }
 
     //  method that unpins discipline from group
-    async unpinSubjectFromGroup(group_subj_id) {
-        this.db.run(
-            `DELETE FROM Groups_Subjects WHERE group_subj_id = $id`,
-            { $id : group_subj_id },
-            (err) => {
-                if (err)
-                    return console.log(err)
-            }
-        )
+    async unpinDisciplineFromGroup(subject_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `DELETE FROM Groups_Subjects WHERE group_subj_id = $id`,
+                { $id : subject_id },
+                (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                }
+            )
+        })
     }
 
-    //  method that returns can this user see this discipline
-    async canSeeDiscipline(user_id, discipline_id)
-
-    //  method that creates department
+    //  method that creates department.
     // department = {head_id, full_name, short_name}
     async createDepartment(department) {
-        this.db.get(
-            `INSERT INTO Departaments (head_id, full_name, short_name)
+        return new Promise ( (resolve, reject) => {
+            this.db.get(
+                `INSERT INTO Departaments (head_id, full_name, short_name)
              VALUES ($head_id, $full_name, $short_name)
-             RETURNING departament_id;`,
-            {
-                $head_id : department.head_id,
-                $full_name : department.full_name,
-                $short_name : department.short_name
-            }, (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            }
-        )
+             RETURNING departament_id; AS department_id`,
+                {
+                    $head_id : department.head_id,
+                    $full_name : department.full_name,
+                    $short_name : department.short_name
+                }, (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                }
+            )
+        } )
     }
 
     //  method that removes department
     async removeDepartment(department_id) {
-        this.db.run(
-            `DELETE FROM Departaments WHERE departament_id = $id`,
-            { $id : department_id },
-            (err) => {
-                if (err)
-                    return console.log(err)
-            }
-        )
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `DELETE FROM Departaments WHERE departament_id = $id`,
+                { $id : department_id },
+                (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                }
+            )
+        } )
     }
 
     //  method that returns info about department
     async departmentInfo(department_id) {
-        this.db.get(
-            `SELECT * FROM Departaments WHERE departament_id = $id;`,
-            { $id : department_id },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-            }
-        )
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT 
+                    departament_id AS department_id,
+                    head_id, full_name, short_name
+                FROM Departaments WHERE departament_id = $id;`,
+                { $id : department_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                }
+            )
+        } )
     }
 
     //  method that renames department
     // name = {full_name, short_name}
     async renameDepartment(department_id, name) {
-        this.db.run(
-            `UPDATE Departments 
-             SET name = $name
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `UPDATE Departaments 
+             SET full_name = $fname,
+                short_name = $sname
              WHERE departament_id = $id`,
-            {
-                $name : name,
-                $id : department_id
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            }
-        )
+                {
+                    $fname : name.full_name,
+                    $sname : name.short_name,
+                    $id : department_id
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                }
+            )
+        } )
     }
 
-    // TODO method that sets new head of department
-    async setDepartmentHead(department_id, head_id)
-    
+    //  method that sets new head of department
+    async setDepartmentHead(department_id, head_id) {
+        return new Promise((resolve, reject) => {
+            this.db.serialize( () => {
+                this.db.run(
+                    `UPDATE Departaments
+                    SET head_id = $head_id 
+                    WHERE departament_id = $departament_id`,
+                    {
+                        $head_id : head_id,
+                        $departament_id : department_id
+                    }, (err) => {
+                        if (err)
+                            return reject(err)
+                        resolve()
+                    }
+                )
+            } )
+        })
+    }
+
     //  method that returns list of students of department
     async studentListOfDepartment(department_id) {
-        this.db.all(
-            `SELECT 
+        return new Promise( (resolve, reject) => {
+            this.db.all(
+                `SELECT 
 	            u.user_id,
 	            u.first_name,
 	            u.second_name,
@@ -516,320 +776,377 @@ class DB {
 	            INNER JOIN Students s USING (group_id)
 	            INNER JOIN Users u ON s.student_id = u.user_id
             ORDER BY g.course, g.group_id`,
-            { $id : department_id },
-            (err, rows) => {
-                if (err)
-                    return console.log(err)
-                return rows
-            }
-        )
+                { $id : department_id },
+                (err, rows) => {
+                    if (err)
+                        reject(err)
+                    resolve(rows)
+                }
+            )
+        } )
     }
 
-    // TODO method that returns can user see this department
-    canSeeDepartment(user_id, department_id)
+    //  method that returns can user see this department
+    async canSeeDepartment(user_id, department_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT department_id AS departament_id 
+                FROM Departaments 
+                WHERE departament_id = $dep_id AND head_id = $id`,
+                {
+                    $dep_id : department_id,
+                    $id : user_id
+                }, (err, row) => {
+                    if (err)
+                        reject(err)
+                    if (row.length === 0)
+                        resolve(false)
+                    resolve(true)
+                }
+            )
+        } )
+    }
 
     //  method that creates topic
-    // topic = {group_subject_id, name}
+    // topic = {subject_id, name}
     async createTopic(topic) {
-        this.db.get(
-            `INSERT INTO Chapters (group_subj_id, name)
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `INSERT INTO Chapters (group_subj_id, name)
             VALUES
 	            ($group_subj_id, $name)
 	        RETURNING chapter_id AS topic_id;`,
-            {
-                $group_subj_id : topic.group_subject_id,
-                $name : topic.name
-            }, (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            }
-        )
+                {
+                    $group_subj_id : topic.subject_id,
+                    $name : topic.name
+                }, (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                }
+            )
+        } )
     }
 
     // method that removes topic
     async removeTopic(topic_id) {
-        this.db.run(
-            `DELETE FROM Chapters WHERE chapter_id = $id;`,
-            { $id : topic_id },
-            (err) => {
-                if (err)
-                    return console.log(err)
-            }
-        )
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `DELETE FROM Chapters WHERE chapter_id = $id;`,
+                { $id : topic_id },
+                (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                }
+            )
+        } )
     }
 
     // method that renames topic
     async renameTopic(topic_id, name) {
-        this.db.run(
-            `UPDATE Chapters
-            SET name = $name
-            WHERE chapter_id = $topic_id;`,
-            {
-                $name : name,
-                $topic_id : topic_id
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            }
-        )
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `UPDATE Chapters
+                SET name = $name
+                WHERE chapter_id = $topic_id;`,
+                {
+                    $name : name,
+                    $topic_id : topic_id
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                }
+            )
+        } )
     }
 
     //  method that creates message
     // message = {user_id, topic_id, text, date, file}
-    async createsMessage(message) {
-        this.db.get(
-            `INSERT INTO Messages (chapter_id, user_id, send_time, message, png_file)
-            VALUES ($topic_id, $user_id, $date, $message, $file)
+    async createMessage(message) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `INSERT INTO Messages (chapter_id, user_id, send_time, message, png_file)
+            VALUES ($chapter_id, $user_id, $date, $message, $file)
             RETURNING message_id`,
-            {
-                $chapter_id : message.topic_id,
-                $user_id : message.user_id,
-                $send_time : send_time,
-                $message : message.text,
-                $png_file : message.file
-            }, (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            }
-        )
+                {
+                    $chapter_id : message.topic_id,
+                    $user_id : message.user_id,
+                    $date : message.date,
+                    $message : message.text,
+                    $file : message.file
+                }, (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                }
+            )
+        } )
     }
 
     //  method that removes message
     async removeMessage(message_id, user_id) {
-        this.db.run(
-            `DELETE FROM Messages
-            WHERE message_id = $id AND user_id = $user_id;`,
-            {
-                $id : message_id,
-                $user_id : user_id
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            }
-        )
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `DELETE FROM Messages
+                 WHERE message_id = $id AND user_id = $user_id;`,
+                {
+                    $id : message_id,
+                    $user_id : user_id
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                }
+            )
+        } )
     }
 
     //  method that edits text and date of message
     async editMessage(user_id, message_id, text) {
-        this.db.run(
-            `UPDATE Messages 
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `UPDATE Messages 
             SET message = $text,
-	        is_changed = 1, 
-            WHERE message_id = $id AND user_id = user_id;`,
-            {
-                $id : message_id,
-                $user_id : user_id,
-                $text : text
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            }
-        )
+	        is_changed = 1
+            WHERE message_id = $id AND user_id = $user_id;`,
+                {
+                    $id : message_id,
+                    $user_id : user_id,
+                    $text : text
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                }
+            )
+        } )
     }
 
     //  method that edits message file
     async editMessageFile(user_id, message_id, new_file) {
-        this.db.run(
-            `UPDATE Messages
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `UPDATE Messages
             SET 
            	is_changed = 1, 
 	        png_file = $file
             WHERE message_id = $id AND user_id = $user_id;`,
-            {
-                $id : message_id,
-                $user_id : user_id,
-                $file : new_file
-            }, (err) => {
-                if (err)
-                    return console.log(err)
-            }
-        )
+                {
+                    $id : message_id,
+                    $user_id : user_id,
+                    $file : new_file
+                }, (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                }
+            )
+        } )
     }
 
     //  method that returns information about message
     async getMessageInfo(message_id) {
-        this.db.get(
-            `SELECT * FROM Messages
-             WHERE message_id = $id`,
-            { $id : message_id },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            }
-        )
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT * FROM Messages
+                WHERE message_id = $id`,
+                { $id : message_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                }
+            )
+        } )
     }
 
     //  method that returns messages in topic
     async getTopicMessages(topic_id) {
-        this.db.all(
-            `SELECT * FROM Messages 
-            WHERE chapter_id = $id;`,
-            { $id : topic_id },
-            (err, rows) => {
-                if (err)
-                    return console.log(err)
-                return rows
-            }
-        )
+        return new Promise( (resolve, reject) => {
+            this.db.all(
+                `SELECT * FROM Messages 
+                WHERE chapter_id = $id;`,
+                { $id : topic_id },
+                (err, rows) => {
+                    if (err)
+                        reject(err)
+                    resolve(rows)
+                }
+            )
+        } )
     }
-
-    // TODO method that returns can see user this topic
-    async canSeeTopic(user_id, topic_id)
 
     // method that returns user_id of user with such email
     async findUserByEmail(email) {
-        this.db.get(
-            `SELECT user_id FROM Users_v 
-             WHERE email = $email`,
-            { $email : email },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return row
-            }
-        )
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT user_id FROM Users_v 
+                WHERE email = $email`,
+                { $email : email },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                }
+            )
+        } )
     }
 
     // check does user exist with this email
     async userEmailExists(email) {
-        this.db.get(
-            `SELECT EXISTS(
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT EXISTS(
                 SELECT email
                 FROM Users
                 WHERE email = $email
             ) AS is_exist`,
-            { $email : email },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return !!row.is_exist
-            }
-        )
+                { $email : email },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(!!row.is_exist)
+                }
+            )
+        } )
     }
 
     // check does user exist with this user_id
     async userExists(user_id) {
-        this.db.get(
-            `SELECT EXISTS(
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT EXISTS(
                 SELECT user_id
                 FROM Users
                 WHERE user_id = $id
             ) AS is_exist`,
-            { $id : user_id },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return !!row.is_exist
-            }
-        )
+                { $id : user_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(!!row.is_exist)
+                }
+            )
+        } )
     }
 
     // check does group exist with this group_id
     async groupExists(group_id) {
-        this.db.get(
-            `SELECT EXISTS(
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT EXISTS(
                 SELECT group_id
                 FROM Groups
                 WHERE group_id = $id
             ) AS is_exist`,
-            { $id : group_id },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return !!row.is_exist
-            }
-        )
+                { $id : group_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(!!row.is_exist)
+                }
+            )
+        } )
     }
 
     // check does subject exist with this subject_id
-    async subjectExists(subject_id) {
-        this.db.get(
-            `SELECT EXISTS(
+    async disciplineExists(subject_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT EXISTS(
                 SELECT subject_id
                 FROM Subjects
                 WHERE subject_id = $id
             ) AS is_exist`,
-            { $id : subject_id },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return !!row.is_exist
-            }
-        )
+                { $id : subject_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(!!row.is_exist)
+                }
+            )
+        } )
     }
 
-    // check does departament exist with this departament_id
-    async departamentExists(departament_id) {
-        this.db.get(
-            `SELECT EXISTS(
-                SELECT departament_id
+    // check does department exist with this department_id
+    async departmentExists(department_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT EXISTS(
+                SELECT departament_id AS department_id
                 FROM Departaments
                 WHERE departament_id = $id
             ) AS is_exist`,
-            { $id : departament_id },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return !!row.is_exist
-            }
-        )
+                { $id : department_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(!!row.is_exist)
+                }
+            )
+        } )
     }
 
     // check does group-subject exist with this id
-    async groupSubjectExists(group_subj_id) {
-        this.db.get(
-            `SELECT EXISTS(
-                SELECT group_subj_id
+    async subjectExists(subject_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT EXISTS(
+                SELECT group_subj_id AS subject_id
                 FROM Groups_Subjects
                 WHERE group_subj_id = $id
             ) AS is_exist`,
-            { $id : group_subj_id },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return !!row.is_exist
-            }
-        )
+                { $id : subject_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(!!row.is_exist)
+                }
+            )
+        } )
     }
 
     // check does topic exist with this topic_id
     async topicExists(topic_id) {
-        this.db.get(
-            `SELECT EXISTS(
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT EXISTS(
                 SELECT chapter_id
                 FROM Chapters
                 WHERE chapter_id = $id
             ) AS is_exist`,
-            { $id : topic_id },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return !!row.is_exist
-            }
-        )
+                { $id : topic_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(!!row.is_exist)
+                }
+            )
+        } )
     }
 
     // check does message exist with this message_id
     async messageExists(message_id) {
-        this.db.get(
-            `SELECT EXISTS(
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT EXISTS(
                 SELECT message_id
                 FROM Messages
                 WHERE message_id = $id
             ) AS is_exist`,
-            { $id : message_id },
-            (err, row) => {
-                if (err)
-                    return console.log(err)
-                return !!row.is_exist
-            }
-        )
+                { $id : message_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(!!row.is_exist)
+                }
+            )
+        } )
     }
 
-};
+}
 
 let db = new DB();
 module.exports = db;
