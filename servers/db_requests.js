@@ -1252,7 +1252,7 @@ class DB {
     async topicList(subject_id) {
         return new Promise( (resolve, reject) => {
             this.db.all(
-                `SELECT * FROM Cheapters
+                `SELECT * FROM Chapters
              WHERE group_subj_id = $id`,
                 { $id : subject_id },
                 (err, rows) => {
