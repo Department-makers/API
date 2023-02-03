@@ -8,9 +8,11 @@ const app = express()
 auth.getAuthList();
 
 const authRoute = require('./routes/auth.js');
-
+const requestRoute = require('./routes/requests.js')
 
 app.use('/', authRoute);
+
+app.use('/', requestRoute);
 
 app.listen(process.env.PORT, (error) => {
     if (error) consol.error(error)

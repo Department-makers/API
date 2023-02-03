@@ -14,11 +14,12 @@ const {
 
 router.use('/create_user', async (req, res) => {
 
-    if (await db.existsUserEmail(res.locals.request.email))
+    if (await db.userEmailExists(res.locals.request.email))
         res.locals.result = {
             code: 1
         }
     else {
+        res.locals.request.is_verified = res.locals.request.role_id == 2
         res.locals.result = {
             code: 0,
             user_id: await db.createUser(res.locals.request)
@@ -606,7 +607,7 @@ router.use('/can_see_subject', async (req, res) => {
 })
 
 router.use('/create_department', async (req, res) => {
-    res.locals.result = db.createDepartment(res.locals.request)
+    res.locals.result = await db.createDepartment(res.locals.request)
     res.locals.code = 0
 
     res.json(res.locals.result)
@@ -979,4 +980,3 @@ router.use('/check_jwt', async (req, res) => {
 })
 
 module.exports = router;
-db.removeUser(res.locals.request.user_id)
