@@ -7,7 +7,7 @@ router.use(bodyParser.urlencoded({ extended: false }));
 
 router.use((req, res, next) => {
     if (req.method == "POST") {
-        res.locals.accessGranted = auth.checkAuth(req.body.auth);
+        res.locals.accessGranted = auth.checkAuth(req.headers.auth);
 
         if(res.locals.accessGranted)
             res.locals.request = req.body;
@@ -18,7 +18,7 @@ router.use((req, res, next) => {
 
 router.use((req, res, next) => {
     if (req.method == "GET") {
-        res.locals.accessGranted = auth.checkAuth(req.query.auth);
+        res.locals.accessGranted = auth.checkAuth(req.headers.auth);
 
         if(res.locals.accessGranted)
             res.locals.request = req.query;
@@ -40,7 +40,6 @@ router.use((req, res, next) => {
         return;
     }
 
-    res.locals.request.auth = undefined;
     next();    
 });
 
