@@ -208,7 +208,7 @@ class DB {
         })
     }
 
-    async getStudentsWait (department_id) {
+    async verifyList(department_id) {
         return new Promise( (resolve, reject) => {
             this.db.all(
                 `SELECT s.student_id, g.group_id, short_name, course, full_name
@@ -224,9 +224,47 @@ class DB {
         } )
     }
 
+    async departmentList() {
+        return new Promise( (resolve, reject) => {
+            this.db.all(
+                `SELECT 
+                departament_id AS department_id,
+                head_id, 
+                full_name, 
+                short_name
+                FROM Departaments
+                WHERE Departaments`,
+                {}, (err, rows) => {
+                    if (err)
+                        reject(err)
+                    resolve(rows)
+                }
+            )
+        })
+    }
+
+    async groupList() {
+        return new Promise( (resolve, reject) => {
+            this.db.all(
+                `SELECT 
+                group_id,
+                departament_id AS department_id,
+                full_name,
+                short_name,
+                train_area_code,
+                form_year,
+                course`, {} ,
+                (err, rows) => {
+                    if (err)
+                        reject(err)
+                    resolve(rows)
+                }
+            )
+        } )
+    }
+
     //  method that sets student as accepted
     async acceptStudent(student_id, group_id) {
-
         return new Promise((resolve, reject) => {
             this.db.serialize(() => {
                 this.db.run(
@@ -340,6 +378,31 @@ class DB {
                         reject(err)
                     resolve()
                 })
+        } )
+    }
+
+    async subjectInfo(subject_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `SELECT group_subj_id AS subject_id, 
+	            subject_id AS discipline_id,
+	            group_id, 
+	            s.name AS subject_name,
+	            g.full_name AS group_fname, 
+	            g.short_name AS group_sname,
+	            g.course AS course
+                FROM Groups_Subjects gs 
+	            INNER JOIN Groups g USING(group_id)
+	            INNER JOIN Subjects s USING(subject_id)
+                WHERE group_subj_id = $id
+                ORDER BY course;`,
+                { $id : subject_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(err)
+                }
+            )
         } )
     }
 
@@ -1145,6 +1208,39 @@ class DB {
             )
         } )
     }
+
+    async addRefreshToken(user_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `INSERT INTO RefreshTokens(user_id)
+                 VALUES($user_id) 
+                 RETURNING token_id`,
+                { $user_id : user_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                })
+            }
+         )
+    }
+
+    async getRefreshToken(token_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.get(
+                `DELETE FROM RefreshTokens
+                 WHERE token_id = $id 
+                 RETURNING user_id`,
+                { $id : token_id },
+                (err, row) => {
+                    if (err)
+                        reject(err)
+                    resolve(row)
+                }
+            )
+        } )
+    }
+
 
 }
 
