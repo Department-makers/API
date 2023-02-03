@@ -211,9 +211,17 @@ class DB {
     async verifyList(department_id) {
         return new Promise( (resolve, reject) => {
             this.db.all(
-                `SELECT s.student_id, g.group_id, short_name, course, full_name
+                `SELECT 
+                    s.student_id, 
+                    u.first_name, 
+                    u.second_name,
+                    g.group_id, 
+                    short_name,
+                    full_name, 
+                    course 
                  FROM Add_Students s
-	             INNER JOIN Groups g ON s.group_id = g.group_id AND g.departament_id = $id;`,
+	             INNER JOIN Groups g ON s.group_id = g.group_id AND g.departament_id = $id
+	             INNER JOIN Users u ON s.student_id = u.user_id;`,
                 { $id : department_id },
                 (err, rows) => {
                     if (err)
@@ -232,8 +240,7 @@ class DB {
                 head_id, 
                 full_name, 
                 short_name
-                FROM Departaments
-                WHERE Departaments`,
+                FROM Departaments`,
                 {}, (err, rows) => {
                     if (err)
                         reject(err)
@@ -253,7 +260,8 @@ class DB {
                 short_name,
                 train_area_code,
                 form_year,
-                course`, {} ,
+                course
+                FROM Groups`, {} ,
                 (err, rows) => {
                     if (err)
                         reject(err)
@@ -400,7 +408,7 @@ class DB {
                 (err, row) => {
                     if (err)
                         reject(err)
-                    resolve(err)
+                    resolve(row)
                 }
             )
         } )
@@ -1211,18 +1219,18 @@ class DB {
 
     async addRefreshToken(user_id) {
         return new Promise( (resolve, reject) => {
-            this.db.get(
-                `INSERT INTO RefreshTokens(user_id)
+                this.db.get(
+                    `INSERT INTO RefreshTokens(user_id)
                  VALUES($user_id) 
                  RETURNING token_id`,
-                { $user_id : user_id },
-                (err, row) => {
-                    if (err)
-                        reject(err)
-                    resolve(row)
-                })
+                    { $user_id : user_id },
+                    (err, row) => {
+                        if (err)
+                            reject(err)
+                        resolve(row)
+                    })
             }
-         )
+        )
     }
 
     async getRefreshToken(token_id) {
