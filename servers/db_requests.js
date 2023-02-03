@@ -1,9 +1,12 @@
 const sqlite3 = require('sqlite3');
+const path = require('path')
+
+const db_path = path.join(__dirname, '..', 'data', 'Departament.db')
 
 class DB {
 
     constructor() {
-        this.db = new sqlite3.Database('../data/Departament.db', (err) => {
+        this.db = new sqlite3.Database(db_path, (err) => {
             if (err)
                 return console.error(err.message)
             console.log('Connected to Departament database')
@@ -177,6 +180,21 @@ class DB {
                     resolve()
                 })
         })
+    }
+
+    async addTeacher(teacher_id) {
+        return new Promise( (resolve, reject) => {
+            this.db.run(
+                `INSERT INTO Teachers(teacher_id)
+                 VALUES($id)`,
+                { $id : teacher_id },
+                (err) => {
+                    if (err)
+                        reject(err)
+                    resolve()
+                }
+            )
+        } )
     }
 
     //  method that sets new group
